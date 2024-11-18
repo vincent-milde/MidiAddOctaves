@@ -1,38 +1,62 @@
+import tkinter as tk
+import ttkbootstrap as ttk
+import midi_handler  # Import the MIDI handler module
 import mido
 
-# List all available input and output MIDI devices
-print("Input devices:", mido.get_input_names())
-print("Output devices:", mido.get_output_names())
-#
-inport_name = '2- Digital Piano-1 0'  # From mido.get_input_names()
-outport_name = 'loopMIDI Port 2'  # From mido.get_output_names() or loopMIDI
+# Window setup
+window = ttk.Window(themename='darkly')
+window.title('MidiAddOctaves')
+window.geometry('500x400')
 
-#open the port
-inport = mido.open_input(inport_name)
-outport = mido.open_output(outport_name)
+# Title
+title_label = ttk.Label(master=window, text='Midi To Octaves', font='Calibri 18 bold')
+title_label.pack(pady=10)
 
-def add_octave(msg):
-    if msg.type == 'note_on' or msg.type == 'note_off':
-        new_note = msg.note + 12
-        if new_note > 127:
-            new_note = 127
-        elif new_note < 0:
-            new_note = 0
-        return mido.Message(msg.type, note=new_note, velocity=msg.velocity, channel=msg.channel, time=msg.time)
-    return msg
+# List of ports
+portsIn = mido.get_input_names()
+portsOut = mido.get_output_names()
 
-print(f"Listening to input on {inport_name}, sending to {outport_name} with octave shift.")
+# Variables to store selected ports
+selected_portIn = tk.StringVar()
+selected_portOut = tk.StringVar()
 
-try:
-    # Listen for incoming messages
-    for msg in inport:
-        print(f"Received: {msg}")
-        outport.send(msg)  # Send original message
-        shifted_msg = add_octave(msg)  # Shift by one octave
-        print(f"Sent: {shifted_msg}")
-        outport.send(shifted_msg)  # Send shifted message
-except KeyboardInterrupt:
-    print("Exiting...")
-finally:
-    inport.close()
-    outport.close()
+#Comboboxes
+
+# Create a Combobox for selecting the input port
+input_label = ttk.Label(master=window, text="MIDI Input", font='Calibri 12')
+input_label.pack(pady=5)
+input_combo = ttk.Combobox(master=window, textvariable=selected_portIn, values=portsIn, state="readonly")
+input_combo.set("Select Input Port")  # Placeholder text
+input_combo.pack(pady=5)
+
+# Create a Combobox for selecting the output port
+output_label = ttk.Label(master=window, text="MIDI Output", font='Calibri 12')
+output_label.pack(pady=5)
+output_combo = ttk.Combobox(master=window, textvariable=selected_portOut, values=portsOut, state="readonly")
+output_combo.set("Select Output Port")  # Placeholder text
+output_combo.pack(pady=5)
+
+# Button to confirm the selection and start the MIDI connection
+def connect_midi():
+    input_port_name = selected_portIn.get()
+    output_port_name = selected_portOut.get()
+    
+    if midi_handler.open_ports(input_port_name, output_port_name):
+        print("Ports opened successfully")
+        midi_handler.start_listening()  # Start the listening thread
+
+def disconnect_midi():
+    midi_handler.close_ports()  # Close the ports and stop listening
+
+# Connect and Disconnect buttons
+connect_button = ttk.Button(window, text="Connect", command=connect_midi)
+connect_button.pack(pady=10)
+
+disconnect_button = ttk.Button(window, text="Disconnect", command=disconnect_midi)
+disconnect_button.pack(pady=5)
+
+#Label
+credit = ttk.Label(master=window, text='Megumin :), BOOOOOO!', font='Euphemia 4')
+credit.pack(side=tk.LEFT, padx=(20, 0), pady=20)
+# Run the application
+window.mainloop()
